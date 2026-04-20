@@ -1,4 +1,4 @@
-# GitHub Learning Notes (Personal v1)
+# GitHub Learning Notes
 
 > Compiled from an in-depth conversation with Claude. My starting point for learning Git/GitHub.
 
