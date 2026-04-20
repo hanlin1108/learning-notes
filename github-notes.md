@@ -308,26 +308,6 @@ Bad ❌: `update`, `fix`, `xxx`, `asdf`
 
 ### Red Lines (NEVER do these)
 - ❌ Push company code to your personal GitHub (even a private repo)
-- ❌ Register your personal GitHub with your work email
-- ❌ Log into your personal GitHub on your work laptop
-- ❌ Use your work email as author on your personal account
-
-### Two Fully Separated Identities
-
-| | Work | Personal |
-|---|---|---|
-| Account | Registered with work email | Registered with Gmail |
-| Computer | Work MacBook | Personal laptop |
-| Code | Company projects | Learning notes, side projects, open-source |
-| Destination | Company GitHub Enterprise | `github.com/your-username` |
-
-```bash
-# On your work computer
-git config --global user.email "you@company.com"
-
-# On your personal computer
-git config --global user.email "you@gmail.com"
-```
 
 ### What to Put on Your Personal Account (Zero Compliance Risk)
 
@@ -344,13 +324,6 @@ git config --global user.email "you@gmail.com"
 
 ### Mode 1: Read Source Code to Learn Architecture
 Pick a library you use daily (`transformers`, `fastapi`), start from a function you know. **Press `.` on any repo page to open a VS Code editor in the browser.**
-
-Recommended repos for AI engineers:
-- `nanoGPT` (Karpathy) — ~300 lines implementing GPT
-- `pydantic` — Masterclass in Python type systems
-- `fastapi` — The art of API design
-- `transformers` — Architecture of large ML libraries
-- `llama.cpp` — Low-level performance optimization
 
 ### Mode 2: Follow Pull Requests to Learn "Engineering Evolution"
 Seeing how people **change** code is more valuable than seeing final versions. Reading a PR = watching the thought process of solving a real problem.
