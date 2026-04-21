@@ -66,32 +66,89 @@ Claude Code will run `git add`, `git commit`, `git push`, and `gh pr create` aut
 
 ## Method B: GitHub App (Let Claude Work Directly on GitHub)
 
-### Step 1. Update Claude Code
-```bash
-claude update
-claude --version
-```
-Version must be ≥ 1.0.44.
+### Core Concept
 
-### Step 2. Log in with your Max account
-```bash
-claude
-```
-Type `/status` to check the current account. If it's not Max, run `/logout` then `/login` with your Max account.
+Mention `@claude` in any GitHub issue or PR, and Claude will automatically spin up in the GitHub cloud to read code, write code, and open PRs — your computer can stay off.
+
+### One-Time Setup (5 minutes)
+
+1. Run `claude update` in terminal, confirm version ≥ 1.0.44
+2. Navigate to your project: `cd your/project/path`
+3. Launch Claude Code: `claude`
+4. Run the install command: `/install-github-app`
 
 > **Important:** If `ANTHROPIC_API_KEY` is set in your environment, Claude Code uses the API key instead of your Max subscription (this incurs API charges).
 > Check: `echo $ANTHROPIC_API_KEY`. If it returns a value, remove it from `~/.zshrc` / `~/.bashrc` and restart your terminal.
 
-### Step 3. Navigate to your project
-```bash
-cd your-project-path
-claude
+The setup wizard will walk you through:
+
+| Step | What to do |
+|------|-----------|
+| Authorize GitHub App in browser | Select target repo → Install |
+| Choose workflows | Check both (@claude + auto review) |
+| Choose authentication | Select "Create a long-lived token with your Claude subscription" (uses your Max plan — no extra cost) |
+| Final step | A setup PR is auto-generated |
+
+Go to GitHub and **Merge that setup PR** → activation complete ✅
+
+### What You Get After Installation
+
+A new `.github/workflows/` folder appears in your repo containing:
+- `claude.yml` — handles @claude mentions
+- `claude-code-review.yml` — auto-reviews new PRs (delete if not needed)
+
+Three OAuth tokens are added to your repo Secrets (managed automatically — don't touch).
+
+### Daily Usage (3 Steps)
+
+1. Go to repo → Issues → New issue
+2. Write `@claude` + your task description
+3. Wait 1–3 minutes — Claude will open a PR
+
+**Example prompts:**
+```
+@claude Fix the typos in README
+@claude Add English docstrings to all functions in utils.py
+@claude Implement the login feature described in issue #12
 ```
 
-### Step 4. Install the GitHub App
+### Full Workflow
+
 ```
-/install-github-app
+You write an issue with @claude
+        ↓
+GitHub spins up a temporary VM
+        ↓
+Claude reads code → creates a branch → makes changes → pushes
+        ↓
+You click "Create PR" to open the pull request
+        ↓
+Review the diff → Merge if happy,
+                  or comment @claude to iterate further
+        ↓
+main branch updated ✅
 ```
+
+### Key Points
+
+- Changes always live on a new branch — main is never touched directly. You can always back out before merging.
+- Claude doesn't auto-open PRs — after it finishes, you click "Create PR" yourself.
+- PRs can be iterated infinitely — not satisfied? Just `@claude` again, the same PR updates automatically.
+- Shared Max quota — Claude's work on GitHub, your local Claude Code, and Claude on the web all draw from the same Max subscription pool.
+
+> **Enabling @claude in Other Repos Later:** Run `/install-github-app` in each repo (recommended)
+
+---
+
+## Method A vs Method B
+
+| | Method A (Local Terminal) | Method B (GitHub App) |
+|---|---|---|
+| Where Claude runs | Your computer | GitHub cloud |
+| Do you need to be present? | Yes | No — even mobile issues work |
+| Response speed | Seconds | 1–3 minutes |
+| Best for | Exploring, debugging, learning | Defined tasks, docs, background automation |
+| Rule of thumb | Need to think → Method A | Need to execute → Method B |
 
 ---
 
