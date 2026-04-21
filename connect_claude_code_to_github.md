@@ -149,3 +149,56 @@ gh pr create --title "..." --body "..."
 ---
 
 *核心就这么多。剩下的等你需要时再查 `github_notes.md`。*
+
+---
+
+## Method A: Use Claude Code Locally with GitHub (Simplest — Recommended for Beginners)
+
+**One-time setup:**
+```bash
+gh auth login
+```
+
+**Daily use:**
+```bash
+cd your-project
+claude
+```
+
+Then describe your task directly, including any GitHub actions. Claude Code will handle `git add`, `git commit`, `git push`, and `gh pr create` automatically. It will ask for your confirmation before touching the repository.
+
+**Example prompts:**
+- "Add a login page on the `feature/login` branch, commit and push to origin when done."
+- "Summarize the last 5 commits on the main branch."
+- "Fix the bug in issue #23, run the tests, then open a PR."
+
+---
+
+## Method B: GitHub App — Let Claude Work Directly on GitHub
+
+### Step 1: Make sure Claude Code is up to date
+```bash
+claude update
+claude --version   # Must be ≥ 1.0.44
+```
+
+### Step 2: Log in with your Max account
+```bash
+claude
+```
+Inside Claude Code, type `/status` to check the current account. If it's not Max, type `/logout` then `/login` and sign in with your Max account.
+
+> **Warning:** If you have `ANTHROPIC_API_KEY` set as an environment variable, Claude Code will use the API key instead of your Max subscription — this will incur API charges.
+> Check with: `echo $ANTHROPIC_API_KEY`
+> If it has a value, remove it from `~/.zshrc` / `~/.bashrc` and restart your terminal.
+
+### Step 3: Navigate to your project
+```bash
+cd your-project-path
+claude
+```
+
+### Step 4: Install the GitHub App
+```
+/install-github-app
+```
