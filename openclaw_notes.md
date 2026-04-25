@@ -1,6 +1,6 @@
 # OpenClaw Learning Notes
 
-> OpenClaw is an open-source C++ reimplementation of the classic 1997 platformer *Captain Claw*, bringing a beloved DOS-era game to modern operating systems.
+> OpenClaw is a free, open-source, self-hosted personal AI assistant that runs on your local machine and lets you chat with AI through messaging apps like Discord, Telegram, and Slack.
 
 ---
 
@@ -8,273 +8,196 @@
 
 1. [What Is OpenClaw?](#1-what-is-openclaw)
 2. [Why It's Popular](#2-why-its-popular)
-3. [Key Capabilities](#3-key-capabilities)
-4. [Architecture Overview](#4-architecture-overview)
+3. [What Can It Do?](#3-what-can-it-do)
+4. [How It Works (The Architecture)](#4-how-it-works-the-architecture)
 5. [How to Get Started](#5-how-to-get-started)
 6. [Common Use Cases](#6-common-use-cases)
-7. [Tips & Gotchas](#7-tips--gotchas)
+7. [Tips & Key Concepts](#7-tips--key-concepts)
+8. [The 20% → 80% Summary](#8-the-20--80-summary)
 
 ---
 
 ## 1. What Is OpenClaw?
 
-**Captain Claw** (1997) was a critically acclaimed 2D platformer by Monolith Productions. As the original game became incompatible with modern OSes, the OpenClaw project was born: a ground-up **C++ reimplementation** of the game engine that can run the original game files on Windows, Linux, and macOS.
+OpenClaw is a **self-hosted AI assistant** — meaning you run it yourself, on your own hardware, with your own API keys.
 
-| | Original Captain Claw | OpenClaw |
+Instead of using a web app to talk to AI, OpenClaw lets you chat through apps you already use every day: **Discord, Telegram, and Slack**.
+
+| | Cloud AI (ChatGPT, Claude.ai) | OpenClaw |
 |---|---|---|
-| Platform | MS-DOS / Win95 | Windows / Linux / macOS |
-| Source | Closed, proprietary | Open-source (GitHub) |
-| Renderer | DirectDraw | SDL2 |
-| Maintainability | Frozen | Actively improved |
-| Moddable | No | Yes |
+| Where it runs | Company's servers | **Your machine** |
+| Who owns the data | The company | **You** |
+| Customizable | Limited | **Fully customizable** |
+| Cost | Subscription | **Free (you pay only for API usage)** |
+| Interface | Web app | **Discord / Telegram / Slack bots** |
 
-**Key distinction**: OpenClaw is a **game engine clone**, not a ROM hack. It reimplements the engine; you still need the original game's asset files (levels, graphics, sounds) to run it.
+**In one sentence**: OpenClaw turns your local machine into a personal AI server that you control completely, accessible through your favorite chat apps.
 
 ---
 
 ## 2. Why It's Popular
 
-### For Retro Gamers
-- Lets you play a beloved 90s classic on modern hardware — no DOSBox needed
-- Better performance and compatibility than emulation
-- Proper keyboard/gamepad support with modern remapping
+### Privacy First
+Your conversations never leave your machine. No third party stores your chat history or uses it for training.
 
-### For Developers & Learners
-- One of the best real-world examples of a **complete, working 2D game engine in C++**
-- Clean architecture — ECS (Entity-Component-System), physics, rendering, audio all separated
-- Shows how to reverse-engineer and document a complex system
-- Active codebase with ~10,000 commits — excellent for reading production C++ at scale
+### Freedom of Choice
+You can plug in **any AI model** — cloud APIs (OpenAI, Anthropic, Google) or local models (Ollama, LM Studio). Switch models without changing your workflow.
 
-### Community
-- Regular contributions from game dev enthusiasts
-- Detailed documentation on the game's binary file formats (`.wwd`, `.til`, `.pid`)
-- Used in university game development courses as a case study
+### Already in Your Chat Apps
+You don't need to open a new app. Ask your AI in the same Discord server you already use, or ping it on Telegram.
+
+### Free and Open Source
+No subscription. No vendor lock-in. Anyone can inspect the code, contribute, or fork it.
+
+### Designed for 2026 AI Workflows
+Built with modern AI patterns in mind — multi-model support, tool use, memory, and integrations are first-class features, not afterthoughts.
 
 ---
 
-## 3. Key Capabilities
+## 3. What Can It Do?
 
-```
-┌────────────────────────────────────────┐
-│              OpenClaw Engine            │
-│                                        │
-│  ┌──────────┐  ┌──────────────────┐   │
-│  │ Renderer │  │  Physics Engine  │   │
-│  │  (SDL2)  │  │  (custom AABB)   │   │
-│  └──────────┘  └──────────────────┘   │
-│  ┌──────────┐  ┌──────────────────┐   │
-│  │  Audio   │  │   Game Logic /   │   │
-│  │  System  │  │   ECS Entities   │   │
-│  └──────────┘  └──────────────────┘   │
-│  ┌──────────────────────────────────┐  │
-│  │     Asset Loader (.wwd files)    │  │
-│  └──────────────────────────────────┘  │
-└────────────────────────────────────────┘
-```
+### Core Capabilities
 
-| Feature | Details |
+| Feature | What It Means |
 |---|---|
-| **All 14 levels** | Complete reimplementation of every original level |
-| **Enemies & AI** | All enemy types with original behavior patterns |
-| **Physics** | Tile-based AABB collision, slopes, moving platforms |
-| **Audio** | MIDI music + WAV sound effects via SDL2_mixer |
-| **Modding** | Custom levels via `.wwd` file format tools |
-| **Save/Load** | Checkpoint system matching the original |
-| **Controls** | Keyboard + gamepad, fully remappable |
-| **Cheats** | Original cheat codes supported |
+| **Multi-platform bots** | Talk to your AI via Discord, Telegram, or Slack |
+| **Any LLM backend** | Connect to OpenAI, Anthropic, local models via Ollama, etc. |
+| **Conversation memory** | Remembers context across sessions |
+| **Tool / function use** | AI can search the web, run code, read files |
+| **Persistent configuration** | Set personality, system prompts, and behaviors per server/channel |
+| **Multi-user support** | Multiple people on the same Discord server can use it |
+| **Self-hosted = private** | Your data stays on your machine |
+
+### What It's NOT
+- Not a cloud service — it requires you to run a server (your own computer or a VPS)
+- Not a replacement for the AI model itself — you still need API keys or local models
 
 ---
 
-## 4. Architecture Overview
+## 4. How It Works (The Architecture)
 
-### The ECS Pattern (Entity-Component-System)
-
-Every game object (Claw, enemies, pickups) is an **Entity** with attached **Components**:
+Think of OpenClaw as a **bridge** between your chat app and an AI model.
 
 ```
-Entity: Captain Claw
-├── PositionComponent    (x, y coordinates)
-├── PhysicsComponent     (velocity, gravity, collision box)
-├── AnimationComponent   (sprite sheet, current frame)
-├── HealthComponent      (HP, invincibility frames)
-└── InputComponent       (keyboard/gamepad bindings)
+You (Discord/Telegram/Slack)
+        ↓
+   OpenClaw Bot
+        ↓
+   Your AI Backend
+  (OpenAI / Claude / Ollama)
+        ↓
+   Response back to chat
 ```
 
-**Systems** then process all entities that have the right components:
+### Key Pieces
 
-```cpp
-// PhysicsSystem processes everything with Position + Physics components
-for (auto& entity : entities_with<PositionComponent, PhysicsComponent>()) {
-    applyGravity(entity);
-    resolveCollisions(entity, tilemap);
-    entity.position += entity.velocity * deltaTime;
-}
-```
+**1. The Bot Layer**
+OpenClaw registers bots on your platforms. When you send a message, the bot catches it.
 
-### Asset Pipeline
+**2. The Orchestrator**
+OpenClaw processes your message — applies your system prompt, retrieves memory if needed, decides what tools to call.
 
-Original game assets are stored in `.wwd` (World, Wap Dungeon) binary files. OpenClaw includes a parser that reads:
+**3. The LLM Connector**
+Sends the assembled request to whatever AI backend you've configured, gets the response.
 
-```
-CLAW.REZ (resource archive)
-└── LEVEL1/
-    ├── LEVEL1.WWD   ← tile map, object placement, scripting
-    ├── IMAGES/      ← sprite PID files
-    ├── SOUNDS/      ← WAV files
-    └── MUSIC/       ← MIDI files
-```
+**4. Memory Store**
+Persists conversation history locally so the AI feels consistent across sessions.
+
+**5. Tool Integrations**
+Optional tools (web search, code execution, file reading) that the AI can invoke when needed.
 
 ---
 
 ## 5. How to Get Started
 
 ### Prerequisites
+- A machine running 24/7 (your PC, a Raspberry Pi, or a cheap VPS)
+- API keys for your chosen AI (e.g., OpenAI, Anthropic) OR a local model via Ollama
+- A Discord/Telegram/Slack account to create a bot
 
-- **C++ compiler** — GCC 7+ or MSVC 2017+ or Clang
-- **CMake** ≥ 3.10
-- **SDL2** libraries: `SDL2`, `SDL2_image`, `SDL2_ttf`, `SDL2_mixer`
-- **Original game assets** — legally required; obtain from GOG.com or your original CD
+### High-Level Setup Steps
 
-### Install Dependencies (Ubuntu/Debian)
-
-```bash
-sudo apt-get install cmake libsdl2-dev libsdl2-image-dev \
-     libsdl2-ttf-dev libsdl2-mixer-dev
+```
+1. Clone the OpenClaw repo from GitHub
+2. Configure your .env file:
+   - Add your AI API key (or point to local Ollama endpoint)
+   - Add your Discord/Telegram/Slack bot token
+3. Set your system prompt and preferences in config
+4. Run OpenClaw (usually: python main.py or docker compose up)
+5. Invite the bot to your Discord server / start your Telegram bot
+6. Start chatting
 ```
 
-### Build
+### The Config File (What Matters Most)
 
-```bash
-git clone https://github.com/pjsdream/OpenClaw.git
-cd OpenClaw
-mkdir build && cd build
-cmake ..
-make -j4
-```
+The config is where most of the power lives:
 
-### Configure
-
-Create or edit `config.xml` in the same directory as the binary:
-
-```xml
-<Config>
-    <Assets>
-        <RezArchive>CLAW.REZ</RezArchive>  <!-- path to original game assets -->
-    </Assets>
-    <Display>
-        <Width>1280</Width>
-        <Height>720</Height>
-        <Fullscreen>false</Fullscreen>
-    </Display>
-    <Audio>
-        <SoundVolume>50</SoundVolume>
-        <MusicVolume>50</MusicVolume>
-    </Audio>
-</Config>
-```
-
-### Run
-
-```bash
-./OpenClaw
-```
-
-Place `CLAW.REZ` (from your original game install) next to the binary. The engine reads all assets from it at startup.
-
-### Controls (Default)
-
-| Action | Key |
+| Config Key | What It Controls |
 |---|---|
-| Move | Arrow keys / WASD |
-| Jump | Alt / Space |
-| Attack | Ctrl |
-| Fire pistol | Delete |
-| Pause | Escape |
+| `model` | Which AI model to use (gpt-4o, claude-3-5-sonnet, etc.) |
+| `system_prompt` | The AI's personality and core instructions |
+| `memory_enabled` | Whether it remembers past conversations |
+| `tools` | Which tools (web search, code, etc.) to enable |
+| `platforms` | Which chat platforms are active |
 
 ---
 
 ## 6. Common Use Cases
 
-### 1. Playing the Game
-The primary use: play Captain Claw natively without DOSBox.
+### Personal AI Assistant
+Your own AI available 24/7 in Discord — ask it anything, get help with tasks, have it draft emails or summarize articles.
 
-```bash
-./OpenClaw          # launches directly to main menu
-```
+### Team AI Bot
+Add it to a shared Discord server so your team can all query the same AI assistant with shared context.
 
-### 2. Learning C++ Game Development
-OpenClaw is widely used as a **reference codebase** for:
-- How to structure a 2D game engine
-- Real-world ECS implementation in C++
-- SDL2 integration patterns
-- Game physics without a third-party physics engine
+### Developer Productivity
+Use it with coding-capable models (Claude, GPT-4o) to review code, explain errors, or generate snippets — all from your Slack channel.
 
-### 3. Modding & Custom Levels
+### Private Research Assistant
+Because all data stays local, it's ideal for sensitive work where you can't use cloud AI tools.
 
-Use community tools to edit `.wwd` files and create custom levels:
-
-```
-1. Open LEVEL1.WWD in WapMap (community level editor)
-2. Modify tiles, place enemies, set checkpoints
-3. Replace the original .wwd file in CLAW.REZ
-4. Run OpenClaw — your level loads automatically
-```
-
-### 4. Porting & Platform Support
-Developers have ported OpenClaw to:
-- **Raspberry Pi** — runs at 60fps on Pi 4
-- **Android** — community fork with touch controls
-- **WebAssembly** — browser-based via Emscripten
+### Learning & Experimentation
+Perfect for developers who want to learn how AI systems, bots, and integrations work in practice.
 
 ---
 
-## 7. Tips & Gotchas
+## 7. Tips & Key Concepts
 
-### Common Issues
+### The System Prompt Is Everything
+The most impactful thing you can customize is the system prompt. A well-crafted system prompt makes the assistant dramatically more useful for your specific needs.
 
-| Problem | Fix |
-|---|---|
-| "CLAW.REZ not found" | Make sure `CLAW.REZ` is in the same directory as the binary |
-| Black screen on launch | Check SDL2 library versions — needs SDL2 ≥ 2.0.8 |
-| No sound | Install `libsdl2-mixer-dev` and ensure MIDI support is compiled in |
-| Slow performance | Build in Release mode: `cmake -DCMAKE_BUILD_TYPE=Release ..` |
-| Level crashes | Verify your `CLAW.REZ` is the unmodified v1.4 release |
+### Start Simple, Add Tools Later
+Begin with just the chat capability. Once that's stable, layer in tools (web search, code execution) one at a time.
 
-### Build Tips
+### Local Models vs. API Models
 
-```bash
-# Debug build (with symbols for gdb)
-cmake -DCMAKE_BUILD_TYPE=Debug ..
+| | Local (Ollama) | API (OpenAI/Anthropic) |
+|---|---|---|
+| Cost | Free (after hardware) | Pay per token |
+| Speed | Depends on your GPU | Fast |
+| Privacy | 100% local | Data sent to provider |
+| Capability | Smaller models | Latest/most capable |
 
-# Release build (optimized, 3-5× faster)
-cmake -DCMAKE_BUILD_TYPE=Release ..
+Use **API models** when you need maximum capability. Use **local models** when privacy is critical or you want zero API costs.
 
-# Verify SDL2 is found correctly before building
-cmake .. --debug-find
-```
+### Memory Has a Context Window
+Even with memory enabled, there's a limit to how much history the AI can "see" at once. OpenClaw handles this by summarizing older conversations.
 
-### Reading the Code
-
-Best files to start with when studying the codebase:
-
-| File | What to learn |
-|---|---|
-| `ClawGameApp.cpp` | Application entry point and initialization |
-| `ActorFactory.cpp` | How game entities are created from data |
-| `PhysicsComponent.cpp` | AABB collision and physics loop |
-| `BaseGameLogic.cpp` | The main game loop and state machine |
+### Bot Token ≠ API Key
+You need two separate credentials: one for your chat platform (Discord bot token) and one for your AI provider (OpenAI key). Don't confuse them.
 
 ---
 
-## The 20% That Gives You 80%
+## 8. The 20% → 80% Summary
 
-If you only remember four things:
+If you remember only four things about OpenClaw:
 
-1. **OpenClaw = engine, not ROM** — it reimplements the engine; you supply the original `CLAW.REZ` assets
-2. **Built on SDL2** — cross-platform graphics, audio, and input via one library
-3. **ECS architecture** — everything is entities + components; systems process them each frame
-4. **Best use: learning C++ game dev** — the codebase is one of the cleanest real-world 2D game engines you can read and run
+1. **It's a bridge** — sits between your chat apps and an AI model, running on hardware you own.
 
----
+2. **Self-hosted = privacy + control** — your data never leaves your machine; you choose the model, the personality, the tools.
 
-*Last updated: 2026-04-25*
+3. **The config file is your power lever** — model choice, system prompt, memory, and tools are all set there. Master the config and you master OpenClaw.
+
+4. **Start with the basics** — get the bot talking in Discord/Telegram first. Add memory, tools, and multi-model support once the core works.
+
+> **The big idea**: OpenClaw lets you run a fully private, fully customizable AI assistant through apps you already use — no subscriptions, no data sharing, no walled gardens.
