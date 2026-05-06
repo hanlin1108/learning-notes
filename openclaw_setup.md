@@ -78,13 +78,27 @@ openclaw tui
 
 Type a message. If the agent responds, you're good!
 
-## Step 8 (Optional) — Connect WhatsApp
+## Step 8 — Connect WhatsApp
 
 ```bash
 openclaw channels login --channel whatsapp
 ```
 
 Scan the QR code with your phone (WhatsApp → Settings → Linked Devices → Link a Device). If the first attempt fails, run the command again.
+
+## Step 9 — Connect Gmail
+
+```bash
+gog auth add your-email@gmail.com --services gmail
+```
+
+This opens your browser for Google login. Sign in and authorize access. After that, restart the gateway:
+
+```bash
+openclaw gateway restart
+```
+
+Now your agent can send and read emails. Test it in the TUI or WhatsApp by saying "Send a test email to your-email@gmail.com".
 
 -----
 
