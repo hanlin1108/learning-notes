@@ -1,4 +1,4 @@
-# OpenClaw Setup Guide for MacBook (Apple Silicon)
+# OpenClaw Setup
 
 ## Prerequisites
 
