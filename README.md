@@ -10,6 +10,8 @@ My personal tech learning notes, continuously updated.
 - [Agent AI Notes](./agent_ai_notes.md) — Building AI agents: components, MCP, patterns, and how it all works together
 - [Build a Code Agent](./build_code_agent_notes.md) — Practical guide to building a code agent with Claude: tools, agentic loop, safety, and cost optimization
 - [MCP Notes](./mcp_notes.md) — Model Context Protocol: architecture, primitives, transports, and using MCP in agent projects
+- [OpenClaw Notes](./openclaw_notes.md) — OpenClaw personal AI agent: setup, usage, and tips
+- [OpenClaw Setup](./openclaw_setup.md) — Step-by-step OpenClaw setup guide for MacBook (Apple Silicon)
 
 ## About
 
