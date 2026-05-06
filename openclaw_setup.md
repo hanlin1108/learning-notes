@@ -137,6 +137,12 @@ sudo pmset -a disablesleep 1
 
 # Stop keeping Mac on forever
 sudo pmset -a disablesleep 0
+
+# Keep Mac awake with lid open (resets after reboot)
+caffeinate -s &
+
+# Stop caffeinate
+killall caffeinate
 ```
 
 -----
