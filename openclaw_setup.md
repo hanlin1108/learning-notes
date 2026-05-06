@@ -120,12 +120,30 @@ Now your agent can send and read emails. Test it in the TUI or WhatsApp by sayin
 
 -----
 
+## Essential Commands
+
+```bash
+# Start OpenClaw
+openclaw gateway start
+
+# Stop OpenClaw
+openclaw gateway stop
+
+# Restart OpenClaw
+openclaw gateway restart
+
+# Keep Mac on forever (lid closed, persists after reboot)
+sudo pmset -a disablesleep 1
+
+# Stop keeping Mac on forever
+sudo pmset -a disablesleep 0
+```
+
+-----
+
 ## Good to Know
 
 - **Auto-start:** The gateway runs automatically on login — no manual start needed.
-- **Manual gateway control:** `openclaw gateway start` to start, `openclaw gateway stop` to stop, `openclaw gateway restart` to refresh after config changes, `openclaw gateway status` to check if it's running.
-- **Run 24/7 with lid closed (recommended):** Run `sudo pmset -a disablesleep 1`, plug in the charger, and close the lid. Your agent stays alive on WhatsApp. To undo: `sudo pmset -a disablesleep 0`. Persists after reboot.
-- **Run 24/7 with lid open:** Run `caffeinate -s &` in Terminal. The screen turns off automatically (won't damage it), but the Mac stays awake. To stop: `killall caffeinate`. Resets after reboot. Only use this if you prefer keeping the lid open.
 - **Either way:** Keep the MacBook plugged in and in a ventilated spot to avoid heat buildup.
 - **API billing:** You pay per token used at console.anthropic.com. Monitor usage under **Settings → Usage**.
 - **Switch models on the fly:** Use `/model opus` or `/model sonnet` in the TUI.
