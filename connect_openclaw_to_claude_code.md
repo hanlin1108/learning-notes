@@ -3,12 +3,12 @@
 ## Architecture
 
 ```
-OpenClaw (daily chat, automation)
-        ↕ or @claude
-    Claude Code (coding, deep tasks)
-        ↕
-    MCP Gmail (read + send email)
+OpenClaw (daily chat, automation) ←→ Claude Code (coding, deep tasks)
+                       ↕
+             MCP Gmail (read + send)
 ```
+
+Switch between them with `/model` in chat. No restart needed.
 
 ---
 
@@ -17,7 +17,6 @@ OpenClaw (daily chat, automation)
 ### Prerequisites
 
 ```bash
-# Ensure Claude Code is installed and logged in
 npm install -g @anthropic-ai/claude-code
 claude auth login
 claude auth status --text
@@ -30,7 +29,7 @@ claude auth status --text
 code ~/.openclaw/openclaw.json
 ```
 
-In the `agents` section, replace or merge to match this:
+Replace the entire `agents` section with:
 
 ```json
 "agents": {
@@ -42,53 +41,48 @@ In the `agents` section, replace or merge to match this:
       ]
     },
     "models": {
-      "anthropic/claude-opus-4-6": { "alias": "opus" },
-      "anthropic/claude-sonnet-4-6": { "alias": "sonnet" },
-      "claude-cli/claude-opus-4-6": { "alias": "claude" }
+      "anthropic/claude-sonnet-4-6": { "alias": "openclaw" },
+      "anthropic/claude-opus-4-6": { "alias": "openclawopus" },
+      "claude-cli/claude-sonnet-4-6": { "alias": "claude" },
+      "claude-cli/claude-opus-4-6": { "alias": "claudeopus" }
     },
     "workspace": "/Users/lihanlin/.openclaw/workspace",
     "compaction": { "mode": "safeguard" },
     "maxConcurrent": 4,
     "subagents": { "maxConcurrent": 8 }
-  },
-  "list": [
-    {
-      "id": "claude",
-      "model": { "primary": "claude-cli/claude-opus-4-6" }
-    }
-  ]
+  }
 }
 ```
+
+**Do NOT add `agents.list` — it has known bugs with multi-agent routing. Use `/model` switching only.**
 
 ### Restart & Test
 
 ```bash
-# 1. Restart gateway
 openclaw gateway restart
+```
 
-# 2. In OpenClaw chat, verify models loaded
-/model list
-# → Should see: claude, sonnet, opus
+Then in OpenClaw chat:
 
-# 3. Switch to Claude Code
-/model claude
-
-# 4. Test it
-Hello, which model are you?
-
-# 5. Switch back to OpenClaw
-/model sonnet
+```
+# Verify: openclaw, openclawopus, claude, claudeopus
+/model claude              # Switch to Claude Code (Sonnet)
+Hello, which model are you?  # Test it
+/model openclaw            # Switch back
 ```
 
 ### Switch Commands
 
-| Action                         | Command          |
-|--------------------------------|------------------|
-| Switch to Claude Code          | `/model claude`  |
-| Switch back to OpenClaw        | `/model sonnet`  |
-| One-shot task                  | `@claude <task>` |
-| Check current model            | `/model status`  |
-| New session (resets to default)| `/new`           |
+| Command               | Routes to                                    |
+|-----------------------|----------------------------------------------|
+| `/model openclaw`     | OpenClaw API — Sonnet (default, fast, cheap) |
+| `/model openclawopus` | OpenClaw API — Opus                          |
+| `/model claude`       | Local Claude Code — Sonnet                   |
+| `/model claudeopus`   | Local Claude Code — Opus                     |
+| `/model status`       | Check current model                          |
+| `/new`                | New session, resets to default (openclaw)    |
+
+All switches are sticky — stays on that model until you switch again or start a new session.
 
 ---
 
@@ -96,7 +90,10 @@ Hello, which model are you?
 
 ### Generate App Password
 
-<https://myaccount.google.com/apppasswords> → create one for "Claude Code"
+1. Go to <https://myaccount.google.com/apppasswords>
+2. Enable 2-Step Verification first if not already on
+3. Create app password for "Claude Code"
+4. Copy the 16-char password (shown once only)
 
 ### Add to Claude Code
 
@@ -109,29 +106,23 @@ claude mcp add imap-email -s user \
   -- npx -y imap-email-mcp
 ```
 
-Config stored at: `~/.claude.json`
-
 ### Verify
 
 ```bash
-# Restart Claude Code
-claude
-
-# Check MCP status
-/mcp
-# → imap-email should show ✔ connected, 10 tools
+claude          # Restart Claude Code
+/mcp            # Should show: imap-email ✔ connected, 10 tools
 ```
+
+Test: ask Claude Code to send a test email to yourself. Gmail MCP also works when OpenClaw routes through Claude Code (`/model claude`).
 
 ---
 
 ## 3. Key Notes
 
-- **OpenClaw default** → API (fast, cheap). **Claude Code** → local CLI (stronger for coding)
-- `/model claude` is sticky (stays until you switch back). `@claude` is one-shot
-- `/new` always resets to default OpenClaw API mode
-- Gmail MCP works in both direct Claude Code and OpenClaw→Claude Code mode
-- Claude Code output is filtered by OpenClaw — you get final text only, not intermediate steps
-- Session logs at `~/.claude/projects/` if you need full details
-- Config files:
+- **OpenClaw vs Claude Code**: Claude Code is stronger for coding (lower hallucination, self-correction loops). OpenClaw is better for daily automation (scheduled tasks, messaging platforms, email triage)
+- **Output filtering**: When using Claude Code through OpenClaw, you only get the final text — no intermediate steps. Check `~/.claude/projects/` for full session logs
+- **Cost**: OpenClaw API = pay per token. Claude Code CLI = uses your Pro/Max subscription
+- **Config files**:
   - OpenClaw: `~/.openclaw/openclaw.json`
   - Claude Code MCP: `~/.claude.json`
+- **Google's official Gmail MCP cannot send email** — that's why we use `imap-email-mcp` (third-party, IMAP/SMTP)
