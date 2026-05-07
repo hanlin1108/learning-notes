@@ -1,6 +1,8 @@
 # Google ADK (Agent Development Kit) Learning Notes
 
-> Google ADK is an open-source Python framework for building, orchestrating, and deploying AI agents — with native integration into Vertex AI and Gemini models.
+> Google ADK is an open-source, code-first Python framework for building, evaluating, and deploying AI agents — with native integration into Vertex AI, Gemini, and support for other models via LiteLLM.
+
+> **Latest stable version: 1.32.0** (as of May 2026) | Also available in TypeScript, Go, and Java.
 
 ---
 
@@ -22,25 +24,29 @@
 
 ## 1. What Is Google ADK?
 
-**Google ADK (Agent Development Kit)** is Google's open-source Python framework for building AI agents. It provides a structured way to define agents, connect them to tools, manage memory and sessions, and deploy to Google Cloud.
+**Google ADK (Agent Development Kit)** is Google's open-source Python framework for building AI agents. It is **model-agnostic** (optimized for Gemini but works with Anthropic, OpenAI, and others via LiteLLM), **deployment-agnostic**, and **framework-compatible** (works alongside LangChain, MCP, etc.).
 
 | | LangChain | CrewAI | Google ADK |
 |---|---|---|---|
-| Primary model | Any | Any | Gemini (Vertex AI) |
+| Primary model | Any | Any | Any (optimized for Gemini) |
 | Orchestration style | Chain-based | Role-based | Hierarchical / Event-driven |
-| Multi-agent | Plugin | First-class | First-class |
+| Multi-agent | Via LangGraph | First-class | First-class |
 | Cloud integration | Manual | Manual | Native (Vertex AI) |
+| Multi-language SDKs | Python only | Python only | Python, TypeScript, Go, Java |
 | Open source | ✅ | ✅ | ✅ |
 
 **When to use ADK:**
 - You're building on Google Cloud / Vertex AI
-- You want first-class Gemini integration
+- You want first-class Gemini integration with the option to swap models
 - You need structured multi-agent workflows with Google tooling (Search, BigQuery, etc.)
-- You want to deploy agents as scalable cloud services
+- You want to deploy agents as scalable cloud services with minimal infra work
 
 **Install:**
 ```bash
 pip install google-adk
+
+# With optional extensions (LiteLLM, etc.)
+pip install "google-adk[extensions]"
 ```
 
 ---
@@ -79,19 +85,18 @@ pip install google-adk
 
 ## 3. Agent Types
 
-ADK provides three main agent types. Pick the one that fits the task.
+ADK provides four main agent types. `Agent` is an alias for `LlmAgent` — both work.
 
-### LlmAgent (Most Common)
+### LlmAgent / Agent (Most Common)
 
 The standard autonomous agent powered by a language model. The LLM decides which tools to call and when to stop.
 
 ```python
-from google.adk.agents import LlmAgent
-from google.adk.tools import google_search
+from google.adk.agents import Agent  # or LlmAgent — both are the same
 
-agent = LlmAgent(
+agent = Agent(
     name="research_agent",
-    model="gemini-2.0-flash",
+    model="gemini-2.5-flash",  # ← recommended latest model
     description="Researches topics using Google Search",
     instruction="You are a research assistant. Use search to find accurate, up-to-date information.",
     tools=[google_search],
@@ -154,6 +159,23 @@ refiner = LoopAgent(
 
 ---
 
+### Agent Config (No-Code Option)
+
+ADK also supports building agents via YAML/JSON config — no Python code required:
+
+```yaml
+# agent.yaml
+name: my_agent
+model: gemini-2.5-flash
+instruction: "You are a helpful assistant."
+tools:
+  - google_search
+```
+
+**Use when:** You want to configure agents declaratively or manage them via config files.
+
+---
+
 ## 4. Tools
 
 Tools are Python functions the agent can call. ADK handles the schema generation automatically from type hints and docstrings.
@@ -171,12 +193,11 @@ def get_stock_price(ticker: str) -> dict:
     Returns:
         A dict with 'ticker' and 'price' keys.
     """
-    # Your logic here
     return {"ticker": ticker, "price": 182.50}
 
-agent = LlmAgent(
+agent = Agent(
     name="finance_agent",
-    model="gemini-2.0-flash",
+    model="gemini-2.5-flash",
     tools=[get_stock_price],
 )
 ```
@@ -187,7 +208,7 @@ agent = LlmAgent(
 
 ### Built-in Tools
 
-ADK ships with ready-to-use tools for common Google services:
+ADK ships with ready-to-use tools:
 
 | Tool | What It Does |
 |---|---|
@@ -200,12 +221,30 @@ ADK ships with ready-to-use tools for common Google services:
 ```python
 from google.adk.tools import google_search, built_in_code_execution
 
-agent = LlmAgent(
+agent = Agent(
     name="analyst",
-    model="gemini-2.0-flash",
+    model="gemini-2.5-flash",
     tools=[google_search, built_in_code_execution],
 )
 ```
+
+---
+
+### Tool Confirmation (Human-in-the-Loop)
+
+ADK has a built-in **tool confirmation flow** — you can require human approval before a tool runs:
+
+```python
+from google.adk.tools.confirmation import requires_confirmation
+
+@requires_confirmation
+def delete_record(record_id: str) -> dict:
+    """Permanently deletes a record. Requires confirmation."""
+    # Will pause and ask user to confirm before executing
+    return db.delete(record_id)
+```
+
+This is the recommended pattern for guarding irreversible or high-risk actions.
 
 ---
 
@@ -222,20 +261,30 @@ def save_result(data: str, tool_context: ToolContext) -> str:
     return "Saved."
 ```
 
-State stored in `tool_context.state` persists across tool calls within a session and is visible to all agents in a multi-agent setup.
+---
+
+### OpenAPI / REST Tools
+
+ADK can auto-generate tools from an OpenAPI spec — no manual wrapping needed:
+
+```python
+from google.adk.tools.openapi_tool import OpenAPIToolset
+
+tools = OpenAPIToolset.from_spec("path/to/openapi.yaml")
+agent = Agent(name="api_agent", tools=tools, ...)
+```
 
 ---
 
 ### Long-Running Tools
 
-For async operations (file processing, external API calls that take time), use `LongRunningFunctionTool`:
+For async operations, use `LongRunningFunctionTool`:
 
 ```python
 from google.adk.tools import LongRunningFunctionTool
 
 async def process_large_file(file_path: str) -> str:
     """Processes a large file asynchronously."""
-    # async work here
     return "Processing complete"
 
 tool = LongRunningFunctionTool(func=process_large_file)
@@ -245,7 +294,7 @@ tool = LongRunningFunctionTool(func=process_large_file)
 
 ## 5. Multi-Agent Orchestration
 
-In ADK, agents can call other agents as tools. This is the foundation of multi-agent systems.
+In ADK, you compose multi-agent systems using the `sub_agents` parameter directly — no extra wrapper needed.
 
 ### Hierarchical Agent Pattern
 
@@ -257,34 +306,46 @@ In ADK, agents can call other agents as tools. This is the foundation of multi-a
 ```
 
 ```python
-from google.adk.agents import LlmAgent
-from google.adk.tools import agent_tool
+from google.adk.agents import Agent
 
-research_agent = LlmAgent(
+research_agent = Agent(
     name="researcher",
-    model="gemini-2.0-flash",
+    model="gemini-2.5-flash",
     description="Searches the web for information on a given topic.",
     tools=[google_search],
 )
 
-writing_agent = LlmAgent(
+writing_agent = Agent(
     name="writer",
-    model="gemini-2.0-flash",
+    model="gemini-2.5-flash",
     description="Writes polished content based on provided research.",
 )
 
-root_agent = LlmAgent(
+# Simply pass sub_agents directly — no AgentTool wrapper needed
+root_agent = Agent(
     name="coordinator",
-    model="gemini-2.0-flash",
+    model="gemini-2.5-flash",
     description="Coordinates research and writing tasks.",
-    tools=[
-        agent_tool.AgentTool(agent=research_agent),
-        agent_tool.AgentTool(agent=writing_agent),
-    ],
+    sub_agents=[research_agent, writing_agent],  # ← direct assignment
 )
 ```
 
-The root agent decides when to delegate to a sub-agent, just like it decides when to call any other tool.
+The root agent automatically decides when to delegate to a sub-agent based on their `description` fields.
+
+---
+
+### A2A Protocol (Remote Agent-to-Agent)
+
+For communicating with agents running on **different machines or services**, ADK integrates with the **A2A (Agent2Agent) Protocol** — an open standard for remote agent-to-agent communication:
+
+```python
+from google.adk.a2a import A2AClient
+
+# Call a remote agent as if it were a local one
+remote_agent = A2AClient(url="https://remote-agent-service.example.com")
+```
+
+**Use A2A when:** You're building distributed systems where agents run as separate services.
 
 ---
 
@@ -298,15 +359,6 @@ Agent B → reads "research_data" from state → processes it
 ```
 
 This avoids passing large blobs through LLM context — store data in state, pass only references.
-
----
-
-### Trust & Safety in Multi-Agent
-
-- **Orchestrators** are trusted (they're your code)
-- **Sub-agents** should be scoped — give them only the tools they need
-- **External content** (web results, user uploads) is untrusted — handle carefully
-- Add guardrails at the root agent level for high-risk actions
 
 ---
 
@@ -327,10 +379,22 @@ session = session_service.create_session(
 )
 ```
 
-Session state is a dict you can use to pass data between agents and tools:
+**Session service options:**
+
+| Service | Best For |
+|---|---|
+| `InMemorySessionService` | Development, testing |
+| `VertexAiSessionService` | Production on GCP |
+| `DatabaseSessionService` (Firestore) | Production with Firestore backend |
+
+---
+
+### Session Rewind
+
+ADK supports **rewinding** a session to before a previous invocation — useful for debugging or letting users undo agent actions:
 
 ```python
-session.state["user_preference"] = "concise answers"
+runner.rewind(session_id=session.id, invocation_id=previous_invocation_id)
 ```
 
 ---
@@ -343,16 +407,15 @@ For state that persists beyond a single session, use a `MemoryService`:
 from google.adk.memory import InMemoryMemoryService
 
 memory_service = InMemoryMemoryService()
-# Ingest a completed session into long-term memory
 memory_service.add_session_to_memory(session)
 ```
 
-The built-in `load_memory` tool lets agents query long-term memory during a conversation:
+The built-in `load_memory` tool lets agents query long-term memory:
 
 ```python
 from google.adk.tools import load_memory
 
-agent = LlmAgent(
+agent = Agent(
     name="personal_assistant",
     tools=[load_memory],
     instruction="Use memory to recall past conversations and user preferences.",
@@ -365,29 +428,53 @@ agent = LlmAgent(
 |---|---|
 | `InMemoryMemoryService` | Development, testing |
 | `VertexAiRagMemoryService` | Production on GCP (uses Vertex AI RAG) |
+| `VertexAiMemoryBankService` | Production with `memories.ingest_events` API |
 | Custom | Your own vector DB (Pinecone, Weaviate, etc.) |
-
----
-
-### Artifact Storage
-
-Agents can produce file outputs (images, PDFs, CSVs). These are stored as artifacts:
-
-```python
-from google.adk.artifacts import InMemoryArtifactService
-
-artifact_service = InMemoryArtifactService()
-```
-
-Artifacts are separate from session state — they're for binary blobs, not structured data.
 
 ---
 
 ## 7. Built-in Integrations
 
+### Supported Models
+
+ADK is **model-agnostic**. It works with:
+
+| Provider | Models | How |
+|---|---|---|
+| Google | Gemini 2.5 Flash/Pro, 1.5 Pro/Flash | Native |
+| Anthropic | Claude 3.5/3.7 Sonnet, Opus | Via LiteLLM |
+| OpenAI | GPT-4o, o3, etc. | Via LiteLLM |
+| Others | Mistral, Cohere, etc. | Via LiteLLM |
+
+**Recommended Gemini models (latest):**
+
+| Model | Best For |
+|---|---|
+| `gemini-2.5-flash` | Default choice — fast, cost-effective, capable |
+| `gemini-2.5-pro` | Complex reasoning, large context |
+| `gemini-1.5-pro` | Long context (1M tokens); large document analysis |
+| `gemini-1.5-flash` | Speed + efficiency balance |
+
+```python
+agent = Agent(
+    name="my_agent",
+    model="gemini-2.5-flash",  # ← current recommended default
+    ...
+)
+
+# Using Anthropic via LiteLLM
+agent = Agent(
+    name="claude_agent",
+    model="litellm/anthropic/claude-sonnet-4-5",
+    ...
+)
+```
+
+---
+
 ### Vertex AI (Google Cloud)
 
-ADK is built to run on Vertex AI Agent Engine — Google's managed runtime for agents.
+ADK deploys natively to Vertex AI Agent Engine — Google's managed runtime:
 
 ```python
 import vertexai
@@ -395,33 +482,9 @@ from vertexai import agent_engines
 
 vertexai.init(project="your-project", location="us-central1")
 
-# Deploy your agent
 remote_app = agent_engines.create(
     agent_engine=your_agent,
     requirements=["google-adk"],
-)
-```
-
-Once deployed, your agent runs as a scalable cloud service with built-in logging and monitoring.
-
----
-
-### Gemini Models
-
-ADK natively supports all Gemini models:
-
-| Model | Best For |
-|---|---|
-| `gemini-2.0-flash` | Fast, cost-effective; great for most agents |
-| `gemini-2.0-flash-thinking` | Complex reasoning with visible thought process |
-| `gemini-1.5-pro` | Long context (1M tokens); large document analysis |
-| `gemini-1.5-flash` | Speed + efficiency balance |
-
-```python
-agent = LlmAgent(
-    name="my_agent",
-    model="gemini-2.0-flash",  # or "gemini-1.5-pro" etc.
-    ...
 )
 ```
 
@@ -429,7 +492,7 @@ agent = LlmAgent(
 
 ### MCP (Model Context Protocol)
 
-ADK supports MCP servers as tool sources — plug in any MCP-compatible server:
+ADK supports MCP servers as tool sources:
 
 ```python
 from google.adk.tools.mcp_tool import MCPToolset, StdioServerParameters
@@ -441,9 +504,9 @@ mcp_tools = MCPToolset(
     )
 )
 
-agent = LlmAgent(
+agent = Agent(
     name="file_agent",
-    model="gemini-2.0-flash",
+    model="gemini-2.5-flash",
     tools=[mcp_tools],
 )
 ```
@@ -459,8 +522,7 @@ from google.adk.tools.langchain_tool import LangchainTool
 from langchain_community.tools import WikipediaQueryRun
 
 wikipedia_tool = LangchainTool(tool=WikipediaQueryRun(...))
-
-agent = LlmAgent(tools=[wikipedia_tool], ...)
+agent = Agent(tools=[wikipedia_tool], ...)
 ```
 
 ---
@@ -468,8 +530,6 @@ agent = LlmAgent(tools=[wikipedia_tool], ...)
 ## 8. Running & Deploying Agents
 
 ### Local Development — Runner
-
-The `Runner` executes the agent turn by turn:
 
 ```python
 from google.adk.runners import Runner
@@ -483,7 +543,6 @@ runner = Runner(
     session_service=session_service,
 )
 
-# Run a turn
 session = session_service.create_session(app_name="my_app", user_id="u1")
 content = types.Content(role="user", parts=[types.Part(text="Research AI trends")])
 
@@ -494,23 +553,26 @@ for event in runner.run(user_id="u1", session_id=session.id, new_message=content
 
 ---
 
-### ADK CLI (Dev Web UI)
-
-ADK ships with a built-in dev server and web UI for testing:
+### ADK CLI — Dev UI & Eval
 
 ```bash
-# Start the dev UI
+# Start the built-in dev web UI (test, debug, inspect traces)
 adk web
 
-# Or run in terminal
+# Run in terminal
 adk run path/to/your/agent
-```
 
-The web UI shows:
-- The conversation
-- Which tools were called
-- The full event trace (great for debugging)
-- State and artifact inspection
+# Evaluate your agent against an eval set
+adk eval \
+    my_agent/ \
+    my_agent/eval_set.evalset.json
+
+# Deploy directly to Vertex AI Agent Engine
+adk deploy agent_engine my_agent/
+
+# Deploy to Cloud Run
+adk deploy cloud_run my_agent/
+```
 
 ---
 
@@ -522,23 +584,16 @@ from vertexai import agent_engines
 
 vertexai.init(project="my-project", location="us-central1")
 
-# Create the remote agent
 remote = agent_engines.create(
     agent_engine=AdkApp(agent=root_agent, enable_tracing=True),
-    requirements=["google-adk>=0.5.0"],
+    requirements=["google-adk>=1.0.0"],
     display_name="My Production Agent",
 )
-
-print(remote.resource_name)  # projects/.../reasoningEngines/...
 ```
-
-Once deployed, call it via the Vertex AI SDK from anywhere in your app.
 
 ---
 
-### Deploy as API (FastAPI)
-
-For custom APIs, ADK generates a FastAPI app from your agent:
+### Deploy as FastAPI / Cloud Run
 
 ```python
 from google.adk.cli.fast_api import get_fast_api_app
@@ -550,7 +605,20 @@ app = get_fast_api_app(
 )
 ```
 
-Run with: `uvicorn main:app`
+Run with: `uvicorn main:app` — or `adk deploy cloud_run` to deploy to Cloud Run automatically.
+
+---
+
+### Observability — OpenTelemetry
+
+ADK 1.32 ships with **native OpenTelemetry** tracing and agentic metrics — no extra setup needed:
+
+```python
+# Enable tracing
+AdkApp(agent=root_agent, enable_tracing=True)
+```
+
+In production on GCP, traces appear automatically in **Cloud Trace** and metrics in **Cloud Monitoring**. Locally, any OTLP-compatible backend works (Jaeger, Grafana Tempo, etc.).
 
 ---
 
@@ -558,20 +626,17 @@ Run with: `uvicorn main:app`
 
 | Feature | Google ADK | LangChain | CrewAI | AutoGen |
 |---|---|---|---|---|
-| Primary model | Gemini | Any | Any | Any |
-| Multi-agent | ✅ Native | ✅ Via LangGraph | ✅ Role-based | ✅ Conversation-based |
-| Workflow agents | ✅ Sequential/Parallel/Loop | ✅ Via LangGraph | ❌ | ❌ |
+| Primary model | Any (Gemini-optimized) | Any | Any | Any |
+| Multi-agent | ✅ Native | ✅ Via LangGraph | ✅ Role-based | ✅ Conversation |
+| Workflow agents | ✅ Sequential/Parallel/Loop | ✅ LangGraph | ❌ | ❌ |
 | Built-in memory | ✅ | ✅ (complex) | Limited | Limited |
 | MCP support | ✅ | ✅ | ❌ | ❌ |
-| Cloud deployment | ✅ Vertex AI native | Manual | Manual | Manual |
-| Dev UI | ✅ Built-in | ✅ LangSmith (paid) | ❌ | ❌ |
+| OpenAPI tools | ✅ | ✅ | ❌ | ❌ |
+| A2A Protocol | ✅ | ❌ | ❌ | ❌ |
+| Cloud deployment | ✅ Vertex AI + Cloud Run | Manual | Manual | Manual |
+| Dev UI | ✅ Built-in `adk web` | ✅ LangSmith (paid) | ❌ | ❌ |
+| Multi-language | Python, TS, Go, Java | Python | Python | Python |
 | Learning curve | Medium | High | Low | Medium |
-
-**Bottom line:**
-- Use **ADK** if you're on GCP + Gemini and want managed deployment
-- Use **LangGraph** for maximum flexibility with any LLM
-- Use **CrewAI** for quick role-based agents with minimal boilerplate
-- Use **AutoGen** for conversational multi-agent research setups
 
 ---
 
@@ -579,10 +644,10 @@ Run with: `uvicorn main:app`
 
 ### Agent Design
 
-- **One agent, one job** — keep each agent focused; use multi-agent for complex tasks
+- **One agent, one job** — keep each agent focused; use `sub_agents` for complex tasks
 - **Clear instructions** — be explicit about what the agent should and should NOT do
-- **Scope tools carefully** — give each agent only the tools it needs for its role
-- **Handle tool errors** — always return error info from tools so the agent can adapt
+- **Scope tools carefully** — give each agent only the tools it needs
+- **Use tool confirmation** for irreversible actions — don't rely on prompts alone
 
 ```python
 def safe_tool(query: str) -> dict:
@@ -597,29 +662,24 @@ def safe_tool(query: str) -> dict:
 
 - Use `session.state` for data shared within a session (not the LLM context)
 - Use `MemoryService` for cross-session persistence
-- Don't store large blobs in state — use `ArtifactService` for files
+- Use `ArtifactService` for binary files — not session state
 - Key naming convention: `"agent_name:key"` to avoid collisions in multi-agent setups
+- Use **Firestore** `DatabaseSessionService` for production durability
 
 ### Cost & Latency
 
-- Use `gemini-2.0-flash` by default — it's 10x cheaper than Pro for most tasks
+- Use `gemini-2.5-flash` by default — fast, cheap, capable
 - Use parallel agents to reduce wall-clock time on independent sub-tasks
 - Set `max_iterations` on LoopAgent — never let it run unbounded
-- Cache repeated context where possible (system instructions don't change between turns)
-
-### Observability
-
-- Enable tracing when deploying: `AdkApp(agent=..., enable_tracing=True)`
-- Use the ADK dev UI (`adk web`) during development — inspect every tool call and event
-- In production, Cloud Trace + Cloud Logging capture the full agent trace on Vertex AI
-- Log `session.state` at the end of each run for debugging
+- Enable tracing to spot expensive steps and optimize them
 
 ### Security
 
-- Never put secrets in tool code — use Secret Manager or env vars
+- Never put secrets in tool code — use Google Secret Manager or env vars
 - Treat web search results as untrusted content (prompt injection risk)
-- Add a guardrails layer at the root agent for high-risk actions (deletes, payments, sends)
+- Add tool confirmation at the root agent level for high-risk actions
 - Use IAM roles scoped to only the GCP resources each agent needs
+- Keep ADK updated — security patches are released regularly (v1.32 includes CVE fixes)
 
 ---
 
@@ -627,7 +687,7 @@ def safe_tool(query: str) -> dict:
 
 ### Mental Model
 
-> An ADK agent is a **Gemini model with a toolbelt**. The model reads your instructions and decides which tool to pick. Your job as a developer is to give it the right tools and clear instructions about when to use them.
+> An ADK agent is a **Gemini model (or any LLM) with a toolbelt and a team**. The model reads your instructions and decides which tool to pick or which sub-agent to delegate to. Your job is to give it the right tools, clear instructions, and the right teammates.
 
 ### The ADK Agent Loop
 
@@ -638,23 +698,25 @@ Runner.run()
     ↓
 Agent reads: instructions + tools + session history + state
     ↓
-LLM decides: call a tool OR respond directly
+LLM decides: call a tool OR delegate to sub-agent OR respond directly
     ↓
-[If tool] → Execute tool → Feed result back → loop
+[If tool] → Execute (with optional confirmation) → Feed result back → loop
     ↓
 [If done] → Final response event → return to user
 ```
 
 ### Do
 
-- ✅ **Use `gemini-2.0-flash` by default** — fast, cheap, capable
-- ✅ **Write detailed docstrings on tools** — the model reads them to decide how to use the tool
+- ✅ **Use `gemini-2.5-flash` by default** — current recommended model
+- ✅ **Use `Agent` or `LlmAgent`** — they're the same class, pick whichever reads better
+- ✅ **Use `sub_agents=[]` directly** — no AgentTool wrapper needed for sub-agents
+- ✅ **Write detailed docstrings on tools** — the model reads them to decide how to use them
 - ✅ **Use `session.state` to pass data** between agents — don't stuff large data into LLM context
-- ✅ **Use SequentialAgent for pipelines** — deterministic, predictable, easy to debug
-- ✅ **Use `adk web` during development** — visual trace of every event, tool call, and state change
+- ✅ **Use tool confirmation for destructive actions** — built-in HITL is cleaner than prompts
+- ✅ **Use `adk web` during development** — visual trace of every event, tool call, and state
 - ✅ **Set `max_iterations` on LoopAgent** — always define a stopping condition
-- ✅ **Return structured dicts from tools** — easier for the LLM to parse and reason about
-- ✅ **Deploy to Vertex AI Agent Engine** — managed scaling, logging, and tracing out of the box
+- ✅ **Use `adk deploy` CLI** — simplest path to Cloud Run or Vertex AI Agent Engine
+- ✅ **Enable OpenTelemetry tracing in prod** — `AdkApp(agent=..., enable_tracing=True)`
 
 ### Avoid
 
@@ -664,28 +726,35 @@ LLM decides: call a tool OR respond directly
 - ❌ **Storing files in session state** — use ArtifactService for binary data
 - ❌ **Skipping tracing in prod** — you can't debug what you can't observe
 - ❌ **Over-trusting external content** — web results and user files can contain injections
+- ❌ **Using `gemini-2.0-flash` as default** — `gemini-2.5-flash` is the current recommended version
 
 ### Quick Reference: Agent Type Cheat Sheet
 
 | Situation | Use This Agent |
 |---|---|
-| Dynamic task, LLM decides next steps | `LlmAgent` |
+| Dynamic task, LLM decides next steps | `Agent` / `LlmAgent` |
 | Fixed sequence of steps | `SequentialAgent` |
 | Run multiple tasks at once | `ParallelAgent` |
 | Generate → evaluate → refine loop | `LoopAgent` |
-| Complex task needing specialization | `LlmAgent` + sub-agents as tools |
+| Complex task needing specialization | `Agent` + `sub_agents=[...]` |
+| Remote agent on another service | `A2AClient` |
 
 ---
 
 ## Reference: Official Resources
 
-- [Google ADK GitHub](https://github.com/google/adk-python) — Source code and examples
+- [Google ADK GitHub (Python)](https://github.com/google/adk-python) — Source code and examples
 - [ADK Documentation](https://google.github.io/adk-docs/) — Official docs
 - [ADK Quickstart](https://google.github.io/adk-docs/get-started/quickstart/) — Build your first agent in 5 minutes
+- [ADK Samples](https://github.com/google/adk-samples) — Real-world examples
+- [ADK TypeScript](https://github.com/google/adk-js) — TypeScript/JS SDK
+- [ADK Go](https://github.com/google/adk-go) — Go SDK
+- [ADK Java](https://github.com/google/adk-java) — Java SDK
+- [A2A Protocol](https://github.com/google-a2a/A2A/) — Agent-to-Agent communication spec
 - [Vertex AI Agent Engine](https://cloud.google.com/vertex-ai/generative-ai/docs/agent-engine/overview) — Managed deployment
-- [ADK Sample Agents](https://github.com/google/adk-samples) — Real-world examples
 - [Gemini API Docs](https://ai.google.dev/gemini-api/docs) — Model reference
+- [CHANGELOG](https://github.com/google/adk-python/blob/main/CHANGELOG.md) — Latest release notes
 
 ---
 
-*Last updated: 2026-05-06*
+*Last updated: 2026-05-06 | ADK version: 1.32.0*
