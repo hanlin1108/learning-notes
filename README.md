@@ -14,6 +14,7 @@ My personal tech learning notes, continuously updated.
 - [OpenClaw Notes](./openclaw_notes.md) — OpenClaw personal AI agent: setup, usage, and tips
 - [OpenClaw Setup](./openclaw_setup.md) — Step-by-step OpenClaw setup guide for MacBook (Apple Silicon)
 - [Vulnerability Scanning Agent](./vuln_scanning_agent_notes.md) — Building a single-agent code security scanner with Google ADK + Gemini 2.5 Pro (Vertex AI)
+- [Claude Skills](./claude_skills_notes.md) — Skills as on-demand expert handbooks: structure, authoring, iteration, and a full Daily Brief example
 
 ## About
 
