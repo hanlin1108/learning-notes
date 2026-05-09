@@ -74,6 +74,40 @@ You can install dozens of skills with near-zero idle token cost.
 
 ---
 
+## What it looks like to use a skill
+
+Skills trigger **automatically** based on your message — you don't `@`-mention or call them by name.
+
+**Example 1 — PDF form (built-in `pdf` skill):**
+```
+You:    Can you fill out this 1099 for me? [attaches blank.pdf]
+Claude: → "fill out" + PDF detected → pdf skill loads
+        → extracts fields, asks for the missing values
+        → returns filled PDF
+```
+
+**Example 2 — Daily brief (custom skill):**
+```
+You:    Morning brief me
+Claude: → "morning brief" matches description → body loads
+        → reads preferences.md, runs web_search per topic
+        → outputs the categorized template
+```
+
+**Example 3 — Code review (custom skill):**
+```
+You:    Look over my PR — github.com/me/proj/pull/42
+Claude: → matches code-review description → checklist loads
+        → fetches diff, runs the team checklist, lists findings
+```
+
+**Forcing a skill** (rare — only when triggering misfires):
+```
+You: Use the code-review skill on this diff
+```
+
+---
+
 ## Where to get skills
 
 - **Anthropic built-ins** (already on Claude.ai, no install): `docx`, `pptx`, `xlsx`, `pdf`, `frontend-design`, `skill-creator`, `pdf-reading`
