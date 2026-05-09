@@ -140,6 +140,55 @@ Fix: add the vague phrasing explicitly to the description. **Skills grow by patc
 
 ---
 
+## A typical user flow (create → optimize → delete)
+
+What most people actually do, with one skill — `code-review`.
+
+### Create
+
+In Claude Code, ask `skill-creator` to do the work:
+
+```
+You: /skill-creator I want a skill that reviews my pull requests
+     against our team's checklist.
+Claude: (interviews you — triggers, rules, output format)
+        (writes ~/.claude/skills/code-review/SKILL.md)
+```
+
+Or by hand: make the folder, write the frontmatter + body.
+
+### Optimize
+
+You use it for a week and notice two issues:
+
+```
+Issue 1: Didn't fire on "look over my PR"
+Fix:     Add phrase to description → "look over", "give feedback on",
+         "check my PR", "review this code"
+
+Issue 2: Skill flags style nits but misses security bugs
+Fix:     Add to body — "Always check first: SQL injection, XSS,
+         auth bypass, secrets in diffs"
+```
+
+Re-run a 5-prompt test set. If trigger rate + output both look good, ship it.
+
+### Delete
+
+Once the team adopts a different review tool, retire the skill:
+
+```bash
+# Claude Code
+rm -rf ~/.claude/skills/code-review/
+
+# Claude.ai
+Settings → Skills → code-review → ... → Delete
+```
+
+**That's the whole lifecycle.** Most skills go through this loop a few times in their first month, then stabilize.
+
+---
+
 ## TL;DR
 
 > A skill = folder + `SKILL.md`. Loud description, lean body, scripts for hard logic, references for long docs. Drop into `.claude/skills/` or upload to Claude.ai. Iterate on trigger rate and output quality. One skill, one job.
