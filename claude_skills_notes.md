@@ -74,6 +74,16 @@ You can install dozens of skills with near-zero idle token cost.
 
 ---
 
+## Where to get skills
+
+- **Anthropic built-ins** (already on Claude.ai, no install): `docx`, `pptx`, `xlsx`, `pdf`, `frontend-design`, `skill-creator`, `pdf-reading`
+- **Official examples**: [github.com/anthropics/skills](https://github.com/anthropics/skills) — clone and adapt
+- **Community**: agentskills.io and similar marketplaces
+
+What you download is just a folder — zip it for Claude.ai, or drop into `~/.claude/skills/`.
+
+---
+
 ## Iteration loop
 
 1. **Test set** — 5–10 prompts (include negatives that should *not* trigger).
@@ -84,6 +94,40 @@ You can install dozens of skills with near-zero idle token cost.
    - Doesn't fire → add more trigger phrases
    - Goes off the rails → add explicit "Never" rules
    - Inconsistent output → move that step into a script
+
+---
+
+## Example: a "Daily Brief" skill
+
+**Goal:** trigger on phrases like "morning brief" → search last 24h news → output a categorized summary.
+
+**Workflow** (the body of SKILL.md):
+
+1. Read `references/preferences.md` for topics + tone
+2. Run one `web_search` per topic, with current year in the query
+3. Use `web_fetch` on top headlines to verify dates
+4. Drop anything >24h old or duplicate
+5. Output in fixed template (Top stories / AI / Finance / Watch today)
+
+**The lesson from iterating on it:**
+
+| Test prompt | Outcome |
+|-------------|---------|
+| "Daily brief" | ✅ fires |
+| "What's the news today?" | ❌ didn't fire — too vague |
+| "Show me US bank earnings" | ✅ correctly didn't fire (single topic) |
+
+Fix: add the vague phrasing explicitly to the description. **Skills grow by patching real failures**, not by trying to be perfect on draft one.
+
+---
+
+## Removing a skill
+
+| Surface | How |
+|---------|-----|
+| **Claude.ai** | Customize → Skills → toggle off, or `...` → Delete |
+| **Claude Code** | `rm -rf ~/.claude/skills/skill-name/` |
+| **API** | Stop loading it in the code execution container |
 
 ---
 
