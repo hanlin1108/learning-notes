@@ -16,6 +16,7 @@ My personal tech learning notes, continuously updated.
 - [Vulnerability Scanning Agent](./vuln_scanning_agent_notes.md) — Building a single-agent code security scanner with Google ADK + Gemini 2.5 Pro (Vertex AI)
 - [Claude Skills](./claude_skills_notes.md) — Skills as on-demand expert handbooks: structure, authoring, iteration, and a full Daily Brief example
 - [Boris Cherny's Claude Code Workflow](./boris_cherny_workflow_notes.md) — The creator's playbook: 13 practices for orchestrating Claude Code like a strategist
+- [Mac Mini Headless Setup](./mac_mini_setup_notes.md) — Set up a Mac Mini on a TV, then run it headlessly from a MacBook via Screen Sharing
 
 ## About
 
